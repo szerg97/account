@@ -7,6 +7,7 @@ import com.szalai.account.core.events.EventModel;
 import com.szalai.account.core.exceptions.AggregateNotFoundException;
 import com.szalai.account.core.exceptions.ConcurrencyException;
 import com.szalai.account.core.infrastructure.EventStore;
+import com.szalai.account.core.producers.EventProducer;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class AccountEventStore implements EventStore {
 
     private final EventStoreRepository repository;
+    private final EventProducer eventProducer;
 
     @Override
     public void saveEvents(String aggregateId, Iterable<BaseEvent> events, Integer expectedVersion) {
@@ -41,8 +43,8 @@ public class AccountEventStore implements EventStore {
                     event
             );
             EventModel persistedEvent = repository.save(model);
-            if(persistedEvent != null){
-                //TODO: produce event to Kafka
+            if(!persistedEvent.getId().isEmpty()){
+                eventProducer.produce(event.getClass().getSimpleName(), event);
             }
         }
     }
